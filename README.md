@@ -19,7 +19,7 @@ Seamlessly integrate global network diagnostics into your backend. Perform remot
 
 Install the package directly using `go get`:
 ```bash
-go get github.com/check-hostcc/check-host-api-go
+go get github.com/Check-Host/go-lib
 ```
 
 ## Quickstart
@@ -31,7 +31,7 @@ import (
 	"fmt"
 	"log"
 	
-	checkhost "github.com/check-hostcc/check-host-api-go"
+	checkhost "github.com/Check-Host/go-lib"
 )
 
 func main() {
