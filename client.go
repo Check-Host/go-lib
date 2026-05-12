@@ -2,13 +2,37 @@ package checkhost
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
+
+// maybeDecompress checks for a gzip magic header (0x1f 0x8b) or a
+// Content-Encoding: gzip response header and inflates the body if either
+// is present. The Check-Host API edge compresses large JSON bodies (e.g.
+// /locations) regardless of the Accept-Encoding request header.
+func maybeDecompress(body []byte, encoding string) []byte {
+	gzippedByMagic := len(body) >= 2 && body[0] == 0x1f && body[1] == 0x8b
+	gzippedByHeader := strings.EqualFold(encoding, "gzip")
+	if !gzippedByMagic && !gzippedByHeader {
+		return body
+	}
+	gzr, err := gzip.NewReader(bytes.NewReader(body))
+	if err != nil {
+		return body
+	}
+	defer gzr.Close()
+	dec, err := io.ReadAll(gzr)
+	if err != nil {
+		return body
+	}
+	return dec
+}
 
 const (
 	DefaultBaseURL = "https://api.check-host.cc"
@@ -70,6 +94,7 @@ func (c *CheckHost) doRequest(method, path string, body interface{}, response in
 	if err != nil {
 		return fmt.Errorf("error reading response body: %w", err)
 	}
+	respBody = maybeDecompress(respBody, resp.Header.Get("Content-Encoding"))
 
 	// Handle specific HTTP Status Codes based on check-host API spec
 	switch resp.StatusCode {
@@ -127,6 +152,7 @@ func (c *CheckHost) doRequestRaw(path, accept string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body: %w", err)
 	}
+	// Don't decompress binary responses (PNG / SVG) - the body IS the image.
 
 	switch resp.StatusCode {
 	case 200:
