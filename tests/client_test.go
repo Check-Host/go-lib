@@ -20,13 +20,16 @@ func setUp() *checkhost.CheckHost {
 }
 
 func throttle() {
-	// 5s used to be enough but the per-IP-per-target bucket on the live
-	// API can get exhausted after a handful of monitoring requests,
-	// especially in CI where the runner shares an outbound IP with
-	// other workloads. 12s leaves comfortable headroom for the bucket
-	// to refill between consecutive checks.
-	log.Println("Sleeping 12 seconds to respect rate limits...")
-	time.Sleep(12 * time.Second)
+	// With the CHECK_HOST_API_KEY GitLab CI variable populated, the API
+	// allows aggressive calls and a short pause is enough to keep the
+	// log readable. Without a key we fall back to 5s for the anonymous
+	// per-target bucket.
+	if os.Getenv("CHECK_HOST_API_KEY") != "" {
+		time.Sleep(500 * time.Millisecond)
+		return
+	}
+	log.Println("Sleeping 5 seconds (anonymous tier)...")
+	time.Sleep(5 * time.Second)
 }
 
 func TestUtilities(t *testing.T) {
