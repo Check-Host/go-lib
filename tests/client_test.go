@@ -2,6 +2,7 @@ package checkhost_test
 
 import (
 	"log"
+	"os"
 	"testing"
 	"time"
 
@@ -9,8 +10,13 @@ import (
 )
 
 func setUp() *checkhost.CheckHost {
-	// Initialize without API key for public tests
-	return checkhost.NewClient("")
+	// CI sets CHECK_HOST_API_KEY (masked GitLab variable, higher rate
+	// limits). Locally we fall back to anonymous tier.
+	apiKey := os.Getenv("CHECK_HOST_API_KEY")
+	if apiKey != "" {
+		log.Println("(using API key from env)")
+	}
+	return checkhost.NewClient(apiKey)
 }
 
 func throttle() {
