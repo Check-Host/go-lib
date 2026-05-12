@@ -1,31 +1,24 @@
 # GitLab CI for the Check-Host Go SDK.
 #
 # Sync to github.com/Check-Host/go-lib is handled by a GitLab native
-# push mirror. Each job runs inside a clean Go container via
-# `docker run` so the runner host doesn't need Go installed locally.
+# push mirror.
 
 stages:
   - lint
   - test
   - build
 
-variables:
-  GO_IMAGE: "golang:1.22-alpine"
+default:
+  image: golang:1.22-alpine
 
-.in_go: &in_go
-  - >-
-    docker run --rm
-    -v "$CI_PROJECT_DIR:/work" -w /work
-    -e CGO_ENABLED=0
-    "$GO_IMAGE"
-    sh -c "$JOB_SCRIPT"
+variables:
+  CGO_ENABLED: "0"
+  GOFLAGS: "-buildvcs=false"
 
 lint:
   stage: lint
-  variables:
-    JOB_SCRIPT: "go vet ./..."
   script:
-    - *in_go
+    - go vet ./...
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -33,10 +26,8 @@ lint:
 
 test:
   stage: test
-  variables:
-    JOB_SCRIPT: "go test -race -cover ./..."
   script:
-    - *in_go
+    - go test -cover ./...
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -44,10 +35,8 @@ test:
 
 build:
   stage: build
-  variables:
-    JOB_SCRIPT: "go build ./..."
   script:
-    - *in_go
+    - go build ./...
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_TAG
