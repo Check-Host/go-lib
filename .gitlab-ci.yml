@@ -9,7 +9,7 @@ stages:
   - build
 
 default:
-  image: golang:1.22-alpine
+  image: golang:1.25-alpine
 
 variables:
   CGO_ENABLED: "0"
