@@ -131,3 +131,39 @@ func (c *CheckHost) Report(uuid string) (map[string]interface{}, error) {
 	err := c.doRequest("GET", fmt.Sprintf("report/%s", uuid), nil, &report)
 	return report, err
 }
+
+// OgImage fetches the dynamic 1200x630 PNG status map for a previously
+// dispatched check. Returns the raw PNG bytes.
+func (c *CheckHost) OgImage(uuid string) ([]byte, error) {
+	return c.doRequestRaw(fmt.Sprintf("report/%s/og-image", uuid), "image/png")
+}
+
+// CountryMap fetches the per-country world map for a check UUID.
+//
+//   - format: "svg" (default) or "png".
+//   - resolution: "low" (800px), "med" (1200px), or "high" (2000px).
+//     Ignored when format is "svg".
+//
+// Returns raw image bytes (UTF-8 text for SVG, binary for PNG).
+func (c *CheckHost) CountryMap(uuid, format, resolution string) ([]byte, error) {
+	if format == "" {
+		format = "svg"
+	}
+	if resolution == "" {
+		resolution = "med"
+	}
+	if format != "svg" && format != "png" {
+		return nil, fmt.Errorf("format must be 'svg' or 'png', got %q", format)
+	}
+	switch resolution {
+	case "low", "med", "high":
+	default:
+		return nil, fmt.Errorf("resolution must be 'low', 'med', or 'high', got %q", resolution)
+	}
+	accept := "image/svg+xml"
+	if format == "png" {
+		accept = "image/png"
+	}
+	path := fmt.Sprintf("report/%s/country-map?format=%s&res=%s", uuid, format, resolution)
+	return c.doRequestRaw(path, accept)
+}

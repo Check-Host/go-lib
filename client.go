@@ -102,3 +102,42 @@ func (c *CheckHost) doRequest(method, path string, body interface{}, response in
 
 	return nil
 }
+
+// doRequestRaw performs a GET request and returns the raw response body
+// without trying to JSON-decode it. Used for binary endpoints
+// (og-image PNG, country-map PNG/SVG).
+func (c *CheckHost) doRequestRaw(path, accept string) ([]byte, error) {
+	url := fmt.Sprintf("%s/%s", c.BaseURL, path)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+	if accept == "" {
+		accept = "*/*"
+	}
+	req.Header.Set("Accept", accept)
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("network error occurred during request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
+
+	switch resp.StatusCode {
+	case 200:
+		return body, nil
+	case 400:
+		return nil, fmt.Errorf("%w: %s", ErrBadRequest, string(body))
+	case 429:
+		return nil, fmt.Errorf("%w: %s", ErrRateLimit, string(body))
+	case 500:
+		return nil, fmt.Errorf("%w: %s", ErrServerError, string(body))
+	default:
+		return nil, fmt.Errorf("check-host api returned an unexpected status code %d: %s", resp.StatusCode, string(body))
+	}
+}
