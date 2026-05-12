@@ -14,8 +14,13 @@ func setUp() *checkhost.CheckHost {
 }
 
 func throttle() {
-	log.Println("Sleeping 5 seconds to respect rate limits...")
-	time.Sleep(5 * time.Second)
+	// 5s used to be enough but the per-IP-per-target bucket on the live
+	// API can get exhausted after a handful of monitoring requests,
+	// especially in CI where the runner shares an outbound IP with
+	// other workloads. 12s leaves comfortable headroom for the bucket
+	// to refill between consecutive checks.
+	log.Println("Sleeping 12 seconds to respect rate limits...")
+	time.Sleep(12 * time.Second)
 }
 
 func TestUtilities(t *testing.T) {
